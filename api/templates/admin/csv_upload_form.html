@@ -1,0 +1,13 @@
+{% extends "admin/base_site.html" %}
+{% block content %}
+<div class="module">
+    <h2>Upload CSV Transactions</h2>
+    <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <button type="submit" class="button button-primary">Upload</button>
+    </form>
+    <br>
+    <a href="../">Back to Transactions</a>
+</div>
+{% endblock %}
