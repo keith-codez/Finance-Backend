@@ -64,7 +64,11 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
-CORS_ALLOW_ALL_ORIGINS = True #switch to CORS_ALLOWED_ORIGINS = ['http://localhost:3000'] for production
+CORS_ALLOW_ALL_ORIGINS = False #switch to CORS_ALLOWED_ORIGINS = ['http://localhost:3000'] for production
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:3000",  # React (local dev)
+    "https://.com",  # Replace with your frontend domain
+]
 
 ROOT_URLCONF = 'backend.urls'
 
