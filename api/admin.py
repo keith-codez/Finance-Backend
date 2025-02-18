@@ -8,6 +8,7 @@ from django.urls import path
 from django import forms
 from django.http import HttpResponseRedirect
 from datetime import datetime
+from django.urls import reverse
 
 # CSV Upload Form
 class CSVUploadForm(forms.Form):
@@ -33,13 +34,15 @@ class WalletAdmin(admin.ModelAdmin):
     inlines = [TransactionInline]  # Show transactions inside Wallet
     actions = ['upload_csv_action']  # CSV Upload action
     
+    
     def upload_csv_action(self, request, queryset):
         if len(queryset) != 1:
             self.message_user(request, "Select only one Wallet to upload transactions.", level='error')
             return redirect("..")
         wallet = queryset.first()
-        return redirect(f"upload-csv/{wallet.id}/")  # Redirect to upload page
-
+        url = reverse("admin:upload_csv", kwargs={"wallet_id": wallet.id})
+        return redirect(url)  
+    
     upload_csv_action.short_description = "Upload CSV Transactions"
 
     def get_urls(self):
