@@ -18,6 +18,9 @@ from io import BytesIO
 from django.db import models
 
 
+
+
+
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def get_wallet(request):
@@ -99,6 +102,25 @@ class TransactionHistoryPDFView(APIView):
 
         # Define the table data
         data = [
+           class TransactionHistoryPDFView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        user = request.user
+        transactions = Transaction.objects.filter(wallet__user=user)
+
+        buffer = BytesIO()
+        response = HttpResponse(content_type='application/pdf')
+        response['Content-Disposition'] = 'attachment; filename="transaction_history.pdf"'
+
+        c = canvas.Canvas(buffer, pagesize=letter)
+
+        # Title and header for the document
+        c.setFont("Helvetica", 16)
+        c.drawString(30, 750, f"Transaction History for {user.username}")
+
+        # Define the table data
+        data = [
             ["Date", "Description", "Amount", "Type"]  # Table headers
         ]
         for transaction in transactions:
@@ -149,6 +171,8 @@ class TransactionHistoryPDFView(APIView):
         c.showPage()
         c.save()
 
+        # Make sure buffer is ready for the response
         buffer.seek(0)
-        response.write(buffer.getvalue())
+        response.write(buffer.getvalue())  # Ensure the file is sent as a response
+
         return response
