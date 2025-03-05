@@ -79,26 +79,26 @@ class TransactionHistoryView(APIView):
         return Response(serializer.data)
 
 
+
 class TransactionHistoryPDFView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        user = request.user
-        transactions = Transaction.objects.filter(wallet__user=user)
+        transactions = Transaction.objects.filter(wallet__user=request.user).order_by('-date')
 
         buffer = BytesIO()
         response = HttpResponse(content_type='application/pdf')
         response['Content-Disposition'] = 'attachment; filename="transaction_history.pdf"'
 
-        c = canvas.Canvas(buffer, pagesize=letter)
-        width, height = letter
+        doc = SimpleDocTemplate(buffer, pagesize=letter)
+        elements = []
 
-        # Title
-        c.setFont("Helvetica-Bold", 16)
-        c.drawCentredString(width / 2, height - 50, f"{user.username}'s Transaction History")
+        styles = getSampleStyleSheet()
+        title = Paragraph("Transaction History", styles['Title'])
+        elements.append(title)
 
-        # Table Data
-        data = [["Date", "Description", "Amount", "Type"]]  # Header Row
+        # Table Data (Header + Transactions)
+        data = [["Date", "Description", "Amount", "Type"]]
         for transaction in transactions:
             data.append([
                 transaction.date.strftime("%d-%m-%Y"),
@@ -107,7 +107,7 @@ class TransactionHistoryPDFView(APIView):
                 transaction.transaction_type
             ])
 
-        # Define Table Style
+        # Define Table
         table = Table(data, colWidths=[1.5 * inch, 2.5 * inch, 1.5 * inch, 1.5 * inch])
         table.setStyle(TableStyle([
             ('BACKGROUND', (0, 0), (-1, 0), colors.black),
@@ -119,17 +119,11 @@ class TransactionHistoryPDFView(APIView):
             ('GRID', (0, 0), (-1, -1), 1, colors.black),
         ]))
 
-        # Position Table in Center
-        table_width, table_height = table.wrap(0, 0)
-        x_position = (width - table_width) / 2
-        y_position = height - 100  # Start below the title
+        # Ensure Table Flows Over Multiple Pages
+        elements.append(table)
 
-        table.drawOn(c, x_position, y_position - table_height)
-
-        # Finalize PDF
-        c.showPage()
-        c.save()
-
+        # Build PDF
+        doc.build(elements)
         buffer.seek(0)
         response.write(buffer.getvalue())
         return response
