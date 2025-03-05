@@ -88,50 +88,45 @@ class TransactionHistoryPDFView(APIView):
 
         buffer = BytesIO()
         response = HttpResponse(content_type='application/pdf')
-        response['Content-Disposition'] = f'attachment; filename="transaction_history_{user.username}.pdf"'
+        response['Content-Disposition'] = 'attachment; filename="transaction_history.pdf"'
 
         c = canvas.Canvas(buffer, pagesize=letter)
         width, height = letter
 
-        # **Header Section**
+        # Title
         c.setFont("Helvetica-Bold", 16)
-        c.drawString(200, height - 50, "Bank Statement")
-        
-        c.setFont("Helvetica", 12)
-        c.drawString(30, height - 70, f"Account Holder: {user.username}")
-        c.drawString(30, height - 85, "Statement Period: Last Transactions")
-        
-        # **Table Data**
-        data = [["Date", "Description", "Amount", "Type"]]  # Table headers
+        c.drawCentredString(width / 2, height - 50, f"{user.username}'s Transaction History")
+
+        # Table Data
+        data = [["Date", "Description", "Amount", "Type"]]  # Header Row
         for transaction in transactions:
             data.append([
-                transaction.date.strftime('%d-%m-%Y'),
+                transaction.date.strftime("%d-%m-%Y"),
                 transaction.description,
                 f"${transaction.amount:.2f}",
                 transaction.transaction_type
             ])
 
-        # **Create Table**
+        # Define Table Style
         table = Table(data, colWidths=[1.5 * inch, 2.5 * inch, 1.5 * inch, 1.5 * inch])
         table.setStyle(TableStyle([
-            ('BACKGROUND', (0, 0), (-1, 0), colors.grey),  # Header row background
-            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),  # Header text color
-            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),  # Center align text
-            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),  # Bold headers
-            ('BOTTOMPADDING', (0, 0), (-1, 0), 8),  # Space for headers
-            ('BACKGROUND', (0, 1), (-1, -1), colors.beige),  # Alternate row color
-            ('GRID', (0, 0), (-1, -1), 1, colors.black),  # Add gridlines
+            ('BACKGROUND', (0, 0), (-1, 0), colors.black),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+            ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+            ('GRID', (0, 0), (-1, -1), 1, colors.black),
         ]))
 
-        # **Table Positioning**
-        table.wrapOn(c, width, height)
-        table.drawOn(c, 30, height - 150)  # Position table on the PDF
+        # Position Table in Center
+        table_width, table_height = table.wrap(0, 0)
+        x_position = (width - table_width) / 2
+        y_position = height - 100  # Start below the title
 
-        # **Footer**
-        c.setFont("Helvetica", 10)
-        c.drawString(30, 30, "Thank you for banking with us!")
-        c.drawString(450, 30, f"Generated on: {request.user.username}")
+        table.drawOn(c, x_position, y_position - table_height)
 
+        # Finalize PDF
         c.showPage()
         c.save()
 
