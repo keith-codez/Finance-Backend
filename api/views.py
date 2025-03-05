@@ -120,19 +120,31 @@ class TransactionHistoryPDFView(APIView):
         ])
         table.setStyle(style)
 
-        # Get the current y-position for placing the table
+        # Define starting y-position
         y_position = 650
+        page_height = letter[1]  # 11 inches, or 792 points
 
-        # Create the table and draw it on the canvas
+        # Draw the table on the canvas
         table.wrapOn(c, 30, y_position)
-        table.drawOn(c, 30, y_position - 100)
 
-        # Check if content fits, and if not, add a new page
-        if len(transactions) > 10:  # Adjust this number based on how many rows fit on a page
+        # Check if it fits on the page, otherwise create a new page
+        if y_position - 100 - table.height < 0:  # Check if table exceeds page height
             c.showPage()
-            y_position = 750
-            table.wrapOn(c, 30, y_position)
-            table.drawOn(c, 30, y_position - 100)
+            y_position = page_height - 50  # Start a new page
+
+        table.drawOn(c, 30, y_position - table.height)
+
+        # If the content doesn't fit on the first page, create another page for additional rows
+        remaining_transactions = transactions[10:]  # You can adjust this to determine how many fit per page
+        data = [["Date", "Description", "Amount", "Type"]]  # Headers for second page
+        for transaction in remaining_transactions:
+            data.append([str(transaction.date), transaction.description, str(transaction.amount), transaction.transaction_type])
+
+        # Create new table for remaining transactions
+        table = Table(data, colWidths=[100, 200, 100, 100])
+        table.setStyle(style)
+        table.wrapOn(c, 30, y_position - 100)  # Adjust y-position to fit next page
+        table.drawOn(c, 30, y_position - table.height)
 
         c.showPage()
         c.save()
