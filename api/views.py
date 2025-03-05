@@ -125,7 +125,7 @@ class TransactionHistoryPDFView(APIView):
 
         # **Table Positioning**
         table.wrapOn(c, width, height)
-        table.drawOn(c, 30, height - 300)  # Position table on the PDF
+        table.drawOn(c, 30, height - 150)  # Position table on the PDF
 
         # **Footer**
         c.setFont("Helvetica", 10)
