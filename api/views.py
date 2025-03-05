@@ -84,21 +84,19 @@ class TransactionHistoryPDFView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        transactions = Transaction.objects.filter(wallet__user=request.user).order_by('-date')
+        user = request.user
+        transactions = Transaction.objects.filter(wallet__user=user)
 
         buffer = BytesIO()
         response = HttpResponse(content_type='application/pdf')
         response['Content-Disposition'] = 'attachment; filename="transaction_history.pdf"'
 
+        # Create PDF document
         doc = SimpleDocTemplate(buffer, pagesize=letter)
         elements = []
 
-        styles = getSampleStyleSheet()
-        title = Paragraph("Transaction History", styles['Title'])
-        elements.append(title)
-
-        # Table Data (Header + Transactions)
-        data = [["Date", "Description", "Amount", "Type"]]
+        # Table Data
+        data = [["Date", "Description", "Amount", "Type"]]  # Header Row
         for transaction in transactions:
             data.append([
                 transaction.date.strftime("%d-%m-%Y"),
@@ -107,7 +105,7 @@ class TransactionHistoryPDFView(APIView):
                 transaction.transaction_type
             ])
 
-        # Define Table
+        # Define Table Style
         table = Table(data, colWidths=[1.5 * inch, 2.5 * inch, 1.5 * inch, 1.5 * inch])
         table.setStyle(TableStyle([
             ('BACKGROUND', (0, 0), (-1, 0), colors.black),
@@ -119,7 +117,6 @@ class TransactionHistoryPDFView(APIView):
             ('GRID', (0, 0), (-1, -1), 1, colors.black),
         ]))
 
-        # Ensure Table Flows Over Multiple Pages
         elements.append(table)
 
         # Build PDF
