@@ -12,7 +12,7 @@ from django.template.loader import get_template
 from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen import canvas
 from reportlab.lib import colors
-from reportlab.platypus import Table, TableStyle
+from reportlab.platypus import Table, TableStyle, SimpleDocTemplate
 from reportlab.lib.units import inch
 from io import BytesIO
 from django.db import models
@@ -90,43 +90,21 @@ class TransactionHistoryPDFView(APIView):
         user = request.user
         transactions = Transaction.objects.filter(wallet__user=user)
 
+        # Create a buffer to hold the PDF data in memory
         buffer = BytesIO()
-        response = HttpResponse(content_type='application/pdf')
-        response['Content-Disposition'] = 'attachment; filename="transaction_history.pdf"'
 
-        c = canvas.Canvas(buffer, pagesize=letter)
-
-        # Title and header for the document
-        c.setFont("Helvetica", 16)
-        c.drawString(30, 750, f"Transaction History for {user.username}")
-
-        # Define the table data
-        data = [
-           class TransactionHistoryPDFView(APIView):
-    permission_classes = [IsAuthenticated]
-
-    def get(self, request):
-        user = request.user
-        transactions = Transaction.objects.filter(wallet__user=user)
-
-        buffer = BytesIO()
-        response = HttpResponse(content_type='application/pdf')
-        response['Content-Disposition'] = 'attachment; filename="transaction_history.pdf"'
-
-        c = canvas.Canvas(buffer, pagesize=letter)
-
-        # Title and header for the document
-        c.setFont("Helvetica", 16)
-        c.drawString(30, 750, f"Transaction History for {user.username}")
-
+        # Create the PDF document using SimpleDocTemplate
+        doc = SimpleDocTemplate(buffer, pagesize=letter)
+        
         # Define the table data
         data = [
             ["Date", "Description", "Amount", "Type"]  # Table headers
         ]
+        
         for transaction in transactions:
             data.append([str(transaction.date), transaction.description, str(transaction.amount), transaction.transaction_type])
 
-        # Create a table with data
+        # Create a table with the transaction data
         table = Table(data, colWidths=[100, 200, 100, 100])
 
         # Apply styling to the table
@@ -142,37 +120,16 @@ class TransactionHistoryPDFView(APIView):
         ])
         table.setStyle(style)
 
-        # Define starting y-position
-        y_position = 650
-        page_height = letter[1]  # 11 inches, or 792 points
+        # Build the PDF document with the table
+        elements = [table]
+        doc.build(elements)
 
-        # Draw the table on the canvas
-        table.wrapOn(c, 30, y_position)
+        # Prepare the HttpResponse with the appropriate content type and headers
+        response = HttpResponse(content_type='application/pdf')
+        response['Content-Disposition'] = 'attachment; filename="transaction_history.pdf"'
 
-        # Check if it fits on the page, otherwise create a new page
-        if y_position - 100 - table.height < 0:  # Check if table exceeds page height
-            c.showPage()
-            y_position = page_height - 50  # Start a new page
-
-        table.drawOn(c, 30, y_position - table.height)
-
-        # If the content doesn't fit on the first page, create another page for additional rows
-        remaining_transactions = transactions[10:]  # You can adjust this to determine how many fit per page
-        data = [["Date", "Description", "Amount", "Type"]]  # Headers for second page
-        for transaction in remaining_transactions:
-            data.append([str(transaction.date), transaction.description, str(transaction.amount), transaction.transaction_type])
-
-        # Create new table for remaining transactions
-        table = Table(data, colWidths=[100, 200, 100, 100])
-        table.setStyle(style)
-        table.wrapOn(c, 30, y_position - 100)  # Adjust y-position to fit next page
-        table.drawOn(c, 30, y_position - table.height)
-
-        c.showPage()
-        c.save()
-
-        # Make sure buffer is ready for the response
+        # Seek to the beginning of the buffer, then write the PDF data to the response
         buffer.seek(0)
-        response.write(buffer.getvalue())  # Ensure the file is sent as a response
+        response.write(buffer.getvalue())
 
         return response
