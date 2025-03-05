@@ -93,21 +93,46 @@ class TransactionHistoryPDFView(APIView):
 
         c = canvas.Canvas(buffer, pagesize=letter)
 
-        c.setFont("Helvetica", 12)
-        c.drawString(30, 750, "Transaction History")
-        c.drawString(30, 730, "Date | Description | Amount | Type")
+        # Title and header for the document
+        c.setFont("Helvetica", 16)
+        c.drawString(30, 750, f"Transaction History for {user.username}")
 
-        y_position = 710
+        # Define the table data
+        data = [
+            ["Date", "Description", "Amount", "Type"]  # Table headers
+        ]
         for transaction in transactions:
-            c.drawString(30, y_position, f"{transaction.date} | {transaction.description} | {transaction.amount} | {transaction.transaction_type}")
-            y_position -= 20
+            data.append([str(transaction.date), transaction.description, str(transaction.amount), transaction.transaction_type])
 
-            if y_position < 50:
-                c.showPage()
-                c.setFont("Helvetica", 12)
-                c.drawString(30, 750, "Transaction History for {user.username}")
-                c.drawString(30, 730, "Date | Description | Amount | Type")
-                y_position = 710
+        # Create a table with data
+        table = Table(data, colWidths=[100, 200, 100, 100])
+
+        # Apply styling to the table
+        style = TableStyle([
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),  # Table header color
+            ('BACKGROUND', (0, 0), (-1, 0), colors.black),
+            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+            ('GRID', (0, 0), (-1, -1), 1, colors.black),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, -1), 10),
+            ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+            ('TOPPADDING', (0, 0), (-1, -1), 6),
+        ])
+        table.setStyle(style)
+
+        # Get the current y-position for placing the table
+        y_position = 650
+
+        # Create the table and draw it on the canvas
+        table.wrapOn(c, 30, y_position)
+        table.drawOn(c, 30, y_position - 100)
+
+        # Check if content fits, and if not, add a new page
+        if len(transactions) > 10:  # Adjust this number based on how many rows fit on a page
+            c.showPage()
+            y_position = 750
+            table.wrapOn(c, 30, y_position)
+            table.drawOn(c, 30, y_position - 100)
 
         c.showPage()
         c.save()
