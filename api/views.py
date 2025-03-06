@@ -86,25 +86,41 @@ class TransactionHistoryPDFView(APIView):
         user = request.user
         transactions = Transaction.objects.filter(wallet__user=user)
 
+        # Get the user's wallet balance
+        wallet, _ = Wallet.objects.get_or_create(user=user)
+        total_credits = Transaction.objects.filter(wallet=wallet, transaction_type='credit').aggregate(total=models.Sum('amount'))['total'] or 0
+        total_debits = Transaction.objects.filter(wallet=wallet, transaction_type='debit').aggregate(total=models.Sum('amount'))['total'] or 0
+        balance = total_debits - total_credits  # Calculate balance
+
         buffer = BytesIO()
         response = HttpResponse(content_type='application/pdf')
         response['Content-Disposition'] = 'attachment; filename="transaction_history.pdf"'
 
         c = canvas.Canvas(buffer, pagesize=letter)
 
+        c.setFont("Helvetica-Bold", 14)
+        c.drawString(30, 780, f"Transaction History for {user.username}")  # Title
         c.setFont("Helvetica", 12)
-        c.drawString(30, 750, "Transaction History")
+        c.drawString(30, 760, f"Current Balance: ${balance:.2f}")  # Balance
+
+        # Table headers
+        c.setFont("Helvetica-Bold", 12)
         c.drawString(30, 730, "Date | Description | Amount | Type")
 
         y_position = 710
+        c.setFont("Helvetica", 12)
+
         for transaction in transactions:
             c.drawString(30, y_position, f"{transaction.date} | {transaction.description} | {transaction.amount} | {transaction.transaction_type}")
             y_position -= 20
 
             if y_position < 50:
                 c.showPage()
+                c.setFont("Helvetica-Bold", 14)
+                c.drawString(30, 780, f"Transaction History for {user.username}")  # Title on new page
                 c.setFont("Helvetica", 12)
-                c.drawString(30, 750, "Transaction History for {user.username}")
+                c.drawString(30, 760, f"Current Balance: ${balance:.2f}")  # Balance on new page
+                c.setFont("Helvetica-Bold", 12)
                 c.drawString(30, 730, "Date | Description | Amount | Type")
                 y_position = 710
 
