@@ -106,14 +106,14 @@ class TransactionHistoryPDFView(APIView):
 
         # Add title and balance display
         title = Paragraph(f"<b>Transaction History for {user.username}</b>", styles["Title"])
-        balance_text = Paragraph(f"<b>Current Balance: ${balance:.2f}</b>", styles["Normal"])
+        balance_text = Paragraph(f"<b>Current Balance: £{balance:.2f}</b>", styles["Normal"])
 
         # Define the table headers
-        data = [["Date", "Description", "Amount ($)", "Type"]]
+        data = [["Date", "Description", "Amount (£)", "Type"]]
 
         # Add transaction data
         for transaction in transactions:
-            data.append([str(transaction.date), transaction.description, f"${transaction.amount:.2f}", transaction.transaction_type])
+            data.append([str(transaction.date), transaction.description, f"£{transaction.amount:.2f}", transaction.transaction_type])
 
         # Create a table with proper column widths
         table = Table(data, colWidths=[100, 200, 100, 100])
