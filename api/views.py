@@ -92,41 +92,59 @@ class TransactionHistoryPDFView(APIView):
         total_debits = Transaction.objects.filter(wallet=wallet, transaction_type='debit').aggregate(total=models.Sum('amount'))['total'] or 0
         balance = total_debits - total_credits  # Calculate balance
 
+        # Create a buffer to hold the PDF data
         buffer = BytesIO()
+
+        # Create the PDF document
+        doc = SimpleDocTemplate(buffer, pagesize=letter)
+
+        # Get default styles
+        styles = getSampleStyleSheet()
+
+        # Add title and balance display
+        title = Paragraph(f"<b>Transaction History for {user.username}</b>", styles["Title"])
+        balance_text = Paragraph(f"<b>Current Balance: ${balance:.2f}</b>", styles["Normal"])
+
+        # Define the table headers
+        data = [["Date", "Description", "Amount ($)", "Type"]]
+
+        # Add transaction data
+        for transaction in transactions:
+            data.append([str(transaction.date), transaction.description, f"${transaction.amount:.2f}", transaction.transaction_type])
+
+        # Create a table with proper column widths
+        table = Table(data, colWidths=[100, 200, 100, 100])
+
+        # Apply table styling
+        style = TableStyle([
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),  # Header color
+            ('BACKGROUND', (0, 0), (-1, 0), colors.black),
+            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+            ('GRID', (0, 0), (-1, -1), 1, colors.black),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, -1), 10),
+            ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+            ('TOPPADDING', (0, 0), (-1, -1), 6),
+        ])
+        table.setStyle(style)
+
+        # Build the PDF with title, balance, and table
+        elements = [
+            title,
+            Spacer(1, 12),  # Space after title
+            balance_text,
+            Spacer(1, 20),  # Space before table
+            table
+        ]
+
+        doc.build(elements)
+
+        # Prepare the HttpResponse
         response = HttpResponse(content_type='application/pdf')
         response['Content-Disposition'] = 'attachment; filename="transaction_history.pdf"'
 
-        c = canvas.Canvas(buffer, pagesize=letter)
-
-        c.setFont("Helvetica-Bold", 14)
-        c.drawString(30, 780, f"Transaction History for {user.username}")  # Title
-        c.setFont("Helvetica", 12)
-        c.drawString(30, 760, f"Current Balance: ${balance:.2f}")  # Balance
-
-        # Table headers
-        c.setFont("Helvetica-Bold", 12)
-        c.drawString(30, 730, "Date | Description | Amount | Type")
-
-        y_position = 710
-        c.setFont("Helvetica", 12)
-
-        for transaction in transactions:
-            c.drawString(30, y_position, f"{transaction.date} | {transaction.description} | {transaction.amount} | {transaction.transaction_type}")
-            y_position -= 20
-
-            if y_position < 50:
-                c.showPage()
-                c.setFont("Helvetica-Bold", 14)
-                c.drawString(30, 780, f"Transaction History for {user.username}")  # Title on new page
-                c.setFont("Helvetica", 12)
-                c.drawString(30, 760, f"Current Balance: ${balance:.2f}")  # Balance on new page
-                c.setFont("Helvetica-Bold", 12)
-                c.drawString(30, 730, "Date | Description | Amount | Type")
-                y_position = 710
-
-        c.showPage()
-        c.save()
-
+        # Move to the start of the buffer and write the PDF content to the response
         buffer.seek(0)
         response.write(buffer.getvalue())
+
         return response
