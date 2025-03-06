@@ -90,16 +90,12 @@ class TransactionHistoryPDFView(APIView):
         user = request.user
         transactions = Transaction.objects.filter(wallet__user=user)
 
-<<<<<<< HEAD
         # Get the user's wallet balance
         wallet, _ = Wallet.objects.get_or_create(user=user)
         total_credits = Transaction.objects.filter(wallet=wallet, transaction_type='credit').aggregate(total=models.Sum('amount'))['total'] or 0
         total_debits = Transaction.objects.filter(wallet=wallet, transaction_type='debit').aggregate(total=models.Sum('amount'))['total'] or 0
         balance = total_debits - total_credits  # Calculate balance
 
-=======
-        # Create a buffer to hold the PDF data in memory
->>>>>>> 8c8450bf2ffa7619e5bfa26697a79cd66a66d629
         buffer = BytesIO()
 
         # Create the PDF document using SimpleDocTemplate
