@@ -133,7 +133,6 @@ class TransactionHistoryPDFView(APIView):
         response = HttpResponse(content_type='application/pdf')
         response['Content-Disposition'] = 'attachment; filename="transaction_history.pdf"'
 
-<<<<<<< HEAD
         c = canvas.Canvas(buffer, pagesize=letter)
 
         c.setFont("Helvetica-Bold", 14)
@@ -167,10 +166,4 @@ class TransactionHistoryPDFView(APIView):
 
         buffer.seek(0)
         response.write(buffer.getvalue())
-=======
-        # Seek to the beginning of the buffer, then write the PDF data to the response
-        buffer.seek(0)
-        response.write(buffer.getvalue())
-
->>>>>>> 8c8450bf2ffa7619e5bfa26697a79cd66a66d629
         return response
