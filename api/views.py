@@ -11,17 +11,12 @@ from django.http import HttpResponse
 from django.template.loader import get_template
 from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen import canvas
-from reportlab.lib import colors
-from reportlab.platypus import Table, TableStyle, SimpleDocTemplate
-from reportlab.lib.units import inch
 from io import BytesIO
 from django.db import models
 
 
 
-
-
-@api_view(['GET'])
+@api_view (['GET'])
 @permission_classes([IsAuthenticated])
 def get_wallet(request):
     wallet, _ = Wallet.objects.get_or_create(user=request.user)
@@ -32,11 +27,12 @@ def get_wallet(request):
     
     balance = total_debits - total_credits
 
+
     wallet_data = serializer.data
     wallet_data['balance'] = balance
 
-    return Response(wallet_data)
 
+    return Response(wallet_data)
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
@@ -50,6 +46,7 @@ def register_user(request):
     if User.objects.filter(username=username).exists():
         return Response({"error": "Username already taken"}, status=400)
     
+
     user = User.objects.create_user(username=username, password=password)
     Wallet.objects.create(user=user)
     return Response({"message": "User registered successfully"}, status=201)
@@ -80,8 +77,7 @@ class TransactionHistoryView(APIView):
         transactions = Transaction.objects.filter(wallet__user=user)
         serializer = TransactionSerializer(transactions, many=True)
         return Response(serializer.data)
-
-
+    
 
 class TransactionHistoryPDFView(APIView):
     permission_classes = [IsAuthenticated]
@@ -97,39 +93,6 @@ class TransactionHistoryPDFView(APIView):
         balance = total_debits - total_credits  # Calculate balance
 
         buffer = BytesIO()
-
-        # Create the PDF document using SimpleDocTemplate
-        doc = SimpleDocTemplate(buffer, pagesize=letter)
-        
-        # Define the table data
-        data = [
-            ["Date", "Description", "Amount", "Type"]  # Table headers
-        ]
-        
-        for transaction in transactions:
-            data.append([str(transaction.date), transaction.description, str(transaction.amount), transaction.transaction_type])
-
-        # Create a table with the transaction data
-        table = Table(data, colWidths=[100, 200, 100, 100])
-
-        # Apply styling to the table
-        style = TableStyle([
-            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),  # Table header color
-            ('BACKGROUND', (0, 0), (-1, 0), colors.black),
-            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-            ('GRID', (0, 0), (-1, -1), 1, colors.black),
-            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-            ('FONTSIZE', (0, 0), (-1, -1), 10),
-            ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
-            ('TOPPADDING', (0, 0), (-1, -1), 6),
-        ])
-        table.setStyle(style)
-
-        # Build the PDF document with the table
-        elements = [table]
-        doc.build(elements)
-
-        # Prepare the HttpResponse with the appropriate content type and headers
         response = HttpResponse(content_type='application/pdf')
         response['Content-Disposition'] = 'attachment; filename="transaction_history.pdf"'
 
